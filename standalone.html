@@ -1,0 +1,202 @@
+<!doctype html>
+
+<html>
+
+<head>
+  <meta charset="utf-8" />
+  <title>Go-Edit: Standalone Mode</title>
+  <!-- Firebase -->
+  <script src="js/firebase.js"></script>
+
+  <!-- CodeMirror -->
+  <script src="js/codemirror.js"></script>
+  <link rel="stylesheet" href="css/codemirror.css" />
+  
+  <!-- Firepad -->
+  <link rel="stylesheet" href="css/firepad.css" />
+  <script src="js/firepad.min.js"></script>
+
+  <!--jquery-->
+  <script src="js/jquery-2.1.1.min.js" type="text/javascript" charset="UTF-8"></script>
+
+  <!--BootstrapJs-->
+  <script src="js/bootstrap.min.js" type="text/javascript" charset="UTF-8"></script>
+
+  <!--Bootstrap Css-->
+  <link href="css/bootstrap.min.css" rel="stylesheet" />
+
+  <style>
+  html { height: 100%; }
+  body { margin: 0; height: 100%; background-color: #F4B350; 
+    background-image:url("img/back_standalone.jpg"); background-size: cover;}
+
+    #firepad-container {
+     width: 100%;
+     height: 100%;
+   }
+   </style>
+ </head>
+
+ <body>
+  <div class="container-fluid row col-md-offset-1 col-md-10">
+
+    <!--header-->
+    <div class="row" style="background-color:rgba(244, 179, 80, 0.3);border-radius: 30px;
+    margin-top: 5px;">
+     
+      <div class="col-md-3" style="padding:5px;">
+        <img class="img-responsive" src="img/logo.png" width="220px">
+      </div>
+
+      <!-- Mode Choice-->
+      <div class="col-md-1 col-md-offset-8 " style="padding:5px;text-align:center">
+       
+       <button class="btn btn-danger dropdown-toggle" data-toggle="dropdown" aria-expanded="false" style="margin-top:24px;">Mode <span class="caret"></span></button>
+       <ul class="dropdown-menu" role="menu">
+        <li><a href="#">Standalone Mode</a></li>
+        <li><a href="./collab.html">Collaboration Coding</a></li>
+      </ul>
+
+      </div>
+    </div>
+
+    <!--Editor-->
+    <div class="row" style="height:485px">
+
+      <div id="firepad-container" class="col-md-12"></div>
+    </div>
+
+    <!--Option buttons-->
+    <div class="row" style="margin-top:4px">
+      <div class="col-md-offset-10 col-md-2" style="text-align:center"> 
+
+        <button class="btn btn-success" onclick="downloadInnerHtml('text/html');">Save</button>
+        <button class="btn btn-warning" onclick="heartext();">Listen</button>
+      </div>
+    </div>
+
+    <!--footer-->
+    <div class="row" style="margin-top:3px">
+      <div class="col-md-12" style="padding:3px;background-color:#C0392B;text-align:center;color:white;  border-top-right-radius: 20px;  border-top-left-radius: 20px;">Made by: &nbsp;&nbsp;Mohammad Asif | &nbsp;&nbsp;Bishal Thingom |&nbsp;&nbsp;Shubham Raizada</div>
+    </div>
+
+  </div>
+
+<script>
+
+var txt;
+//Convert text to Audio using Google TTS
+function heartext() {
+        //location.href = "http://tts-api.com/tts.mp3?q="+txt;
+        var audio = new Audio();
+        console.log(txt);
+        audio.src ='http://translate.google.com/translate_tts?ie=utf-8&tl=en&q='+txt;
+        audio.play();
+
+  };
+
+ //To download document text
+ function downloadInnerHtml(mimeType) {
+   // txt = txt.replace("\n"," ");
+   txt = txt.split("\n").join(" ");
+   txt = txt.split("\r").join(" ");
+    //var newline=String.fromCharCode(13);
+
+    //txt=txt.replace("\n/g",newline);
+   //txt = txt.replace(/\r?\n/g, "<br />");
+   var elHtml = txt;
+   console.log(elHtml);
+   var link = document.createElement('a');
+   mimeType = mimeType || 'text/plain';
+   var filename =  'text.txt';
+
+   link.setAttribute('download', filename);
+   link.setAttribute('href', 'data:' + mimeType + ';charset=utf-8,' + encodeURIComponent(elHtml));
+   link.click(); 
+ }
+
+//Initialising Firbase database and Codemirror API
+function init() {
+      // Initialize Firebase with Go-Edit database.
+      var firepadRef =new Firebase('https://go-edit-standalone.firebaseio.com/');
+
+      //Initialising CodeMirror Api with options
+      var codeMirror = CodeMirror(document.getElementById('firepad-container'), { lineWrapping: true });
+      
+      // Create Firepad (with rich text toolbar and shortcuts enabled).
+      var firepad = Firepad.fromCodeMirror(firepadRef, codeMirror,
+        { richTextToolbar: true, richTextShortcuts: true });
+
+      //// Initialize contents.
+      firepad.on('ready', function() {
+        if (firepad.isHistoryEmpty()) {
+          firepad.setHtml(
+           "Hello! Start making notes...");
+        }
+      });
+      // An example of a complex custom entity.
+      firepad.registerEntity('checkbox', {
+        render: function (info, entityHandler) {
+          var inputElement = document.createElement('input');
+          inputElement.setAttribute('type', 'checkbox');
+          if(info.checked) {
+            inputElement.checked = 'checked';
+          }
+          inputElement.addEventListener('click', function () {
+            entityHandler.replace({checked:this.checked});
+          });
+          return inputElement;
+        }.bind(this),
+        fromElement: function (element) {
+          var info = {};
+          if(element.hasAttribute('checked')) {
+            info.checked = true;
+          }
+          return info;
+        },
+        update: function (info, element) {
+          if (info.checked) {
+            element.checked = 'checked';
+          } else {
+            element.checked = null;
+          }
+        },
+        export: function (info) {
+          var inputElement = document.createElement('checkbox');
+          if(info.checked) {
+            inputElement.setAttribute('checked', true);
+          }
+          return inputElement;
+        }
+      });
+
+  //To do action on successful write in database
+  firepad.on('synced', function(isSynced) {
+   var str;
+   str=firepad.getText();
+   txt=str;
+      //console.log(str);
+    });
+
+  }
+
+  // Helper to get hash from end of URL or generate a random one.
+  function getExampleRef() {
+    var ref = new Firebase('https://firepad.firebaseio-demo.com');
+    var hash = window.location.hash.replace(/#/g, '');
+    if (hash) {
+      ref = ref.child(hash);
+    } else {
+      ref = ref.push(); // generate unique location.
+      window.location = window.location + '#' + ref.key(); // add it as a hash to the URL.
+    }
+    if (typeof console !== 'undefined')
+      console.log('Firebase data: ', ref.toString());
+    return ref;
+  }
+    
+  init();
+    
+  </script>
+</body>
+</html>

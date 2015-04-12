@@ -1,0 +1,188 @@
+<!doctype html>
+<html>
+
+<head>
+  <meta charset="utf-8" />
+  <title>Go-Edit: Collaborative Mode</title>
+
+  <!-- Firebase -->
+  <script src="js/firebase.js"></script>
+
+  <!-- CodeMirror -->
+  <script src="js/codemirror.js"></script>
+  <link rel="stylesheet" href="css/codemirror.css" />
+
+  <!--Syntax for C++-->
+  <script src="js/clike.js"></script>
+  <link rel="stylesheet" href="css/show-hint.css" />
+  <script src="js/show-hint.js"></script>
+
+  <!-- Firepad -->
+  <link rel="stylesheet" href="css/firepad.css" />
+  <script src="js/firepad.min.js"></script>
+
+  <!--User list-->
+  <script src="js/firepad-userlist.js"></script>
+  <link rel="stylesheet" href="css/firepad-userlist.css" />
+
+  <!--jquery-->
+  <script src="js/jquery-2.1.1.min.js" type="text/javascript" charset="UTF-8"></script>
+
+  <!--BootstrapJs-->
+  <script src="js/bootstrap.min.js" type="text/javascript" charset="UTF-8"></script>
+  
+  <!--Bootstrap Css-->
+  <link href="css/bootstrap.min.css" rel="stylesheet" />
+
+  <style>
+  html { height: 100%; }
+  body { margin: 0; height: 100%; background-color: #F4B350; 
+         background-image:url("img/back_user.png"); background-size: cover; }
+
+    #firepad {
+      position: absolute;  
+      top: 79px;
+      bottom: 72px;
+      /* right: 0; */
+      left: 285px;
+      height: auto;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="container-fluid main row col-md-offset-1 col-md-10">
+    
+    <!--header-->
+    <div class="row" style="background-color:rgba(171, 183, 183, 0.5);border-radius: 30px;
+    margin-top: 5px;">
+      <div class="col-md-3" style="padding:5px;">
+        <img class="img-responsive" src="img/logo.png" width="220px">
+      </div>
+
+      <!-- Mode Choice-->
+      <div class="col-md-1 col-md-offset-8 " style="padding:5px;text-align:center">
+         
+         <button class="btn btn-danger dropdown-toggle" data-toggle="dropdown" aria-expanded="false" style="margin-top:24px;">Mode <span class="caret"></span></button>
+         
+         <ul class="dropdown-menu" role="menu">
+          <li><a href="./standalone.html">Standalone Mode</a></li>
+          <li><a href="#">Collaboration Coding</a></li>
+        </ul>
+
+      </div>
+    </div>
+  
+  <!--Editor-->
+  <div class="row">
+    <div id="userlist" class="col-md-3 "></div>
+    <div id="firepad" class="col-md-9"></div>
+  </div>
+  
+  <!--Option buttons-->
+  <div class="row" style="margin-top:3px">
+    <div class="col-md-offset-10 col-md-2" style="text-align:center"> 
+      <button class="btn btn-success" onclick="downloadInnerHtml('text/html');">Save</button>
+      <button class="btn btn-warning" onclick="heartext();">Listen</button>
+    </div>
+  </div>
+
+  <!--footer-->
+  <div class="row" style="margin-top:3px">
+    <div class="col-md-12" style="padding:3px;background-color:#913D88; text-align:center; color:white; border-top-right-radius: 20px;  border-top-left-radius: 20px;">Made by:&nbsp;&nbsp; Mohammad Asif | &nbsp;&nbsp;Bishal Thingom |&nbsp;&nbsp;Shubham Raizada
+    </div>
+  </div>
+
+</div>
+
+<script>
+
+var txt;
+  //Convert text to Audio using Google TTS
+  function heartext() {
+        //location.href = "http://tts-api.com/tts.mp3?q="+txt;
+        var audio = new Audio();
+        console.log(txt);
+        audio.src ='http://translate.google.com/translate_tts?ie=utf-8&tl=en&q='+txt;
+        audio.play();
+
+      };
+  //To download document text
+  function downloadInnerHtml(mimeType) {
+     // txt = txt.replace("\n"," ");
+     txt = txt.split("\n").join(" ");
+     txt = txt.split("\r").join(" ");
+      //var newline=String.fromCharCode(13);
+
+      //txt=txt.replace("\n/g",newline);
+     //txt = txt.replace(/\r?\n/g, "<br />");
+     var elHtml = txt;
+     console.log(elHtml);
+     var link = document.createElement('a');
+     mimeType = mimeType || 'text/plain';
+     var filename =  'text.txt';
+
+     link.setAttribute('download', filename);
+     link.setAttribute('href', 'data:' + mimeType + ';charset=utf-8,' + encodeURIComponent(elHtml));
+     link.click(); 
+   }
+
+//Initialising Firbase database and Codemirror API
+function init() {
+  
+    getExampleRef();
+
+    //Connecting to Go-Edit database on Firebase
+    var firepadRef = new Firebase('https://go-edit.firebaseio.com/');
+
+    //Initialising Codemirror with options
+    var codeMirror = CodeMirror(document.getElementById('firepad'), { lineWrapping: true, lineNumbers: true, mode: 'text/x-c++src', matchBrackets: true });
+
+      // Create a random ID to use as our user ID (we must give this to firepad and FirepadUserList).
+      var userId = Math.floor(Math.random() * 9999999999).toString();
+
+      //// Create Firepad (with rich text features and our desired userId).
+      var firepad = Firepad.fromCodeMirror(firepadRef, codeMirror,
+        { richTextToolbar: true, richTextShortcuts: true, userId: userId});
+
+      //// Create FirepadUserList (with our desired userId).
+      var firepadUserList = FirepadUserList.fromDiv(firepadRef.child('users'),
+        document.getElementById('userlist'), userId);
+
+      //// Initialize contents.
+      firepad.on('ready', function() {
+        if (firepad.isHistoryEmpty()) {
+          firepad.setText('Collaborate on the go. Write codes and discuss ideas');
+        }
+      });
+
+  //To do action on successful write in database
+  firepad.on('synced', function(isSynced) {
+   var str;
+   str=firepad.getText();
+   txt=str;
+      //console.log(str);
+    });
+  }
+
+    // Helper to get hash from end of URL or generate a random one.
+    function getExampleRef() {
+      var ref = new Firebase('https://firepad.firebaseio-demo.com');
+      var hash = window.location.hash.replace(/#/g, '');
+      if (hash) {
+        ref = ref.child(hash);
+      } 
+      else {
+        ref = ref.push(); // generate unique location.
+        window.location = window.location + '#' + ref.key(); // add it as a hash to the URL.
+      }
+   if (typeof console !== 'undefined')
+    console.log('Firebase data: ', ref.toString());
+    return ref;
+  }
+    
+  init();
+
+  </script>
+  </body>
+</html>
